@@ -22,6 +22,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 
 
 @Composable
@@ -29,12 +33,31 @@ fun GameScreen() {
     var gameStarted by remember { mutableStateOf(false) }
     var playerX by remember {mutableStateOf(0f)}
     var playerY by remember {mutableStateOf(0f)}
-    val player = remember { Player(x=0f, y=0f)}
     var playerInitialized by remember {mutableStateOf(false)}
+    var screenWidth by remember {mutableStateOf(0f)}
+    val player = remember { Player(x=0f, y=0f)}
+    var fireRequested by remember {mutableStateOf(false) }
+    var bullets by remember {mutableStateOf(listOf<Bullet>())}
+    LaunchedEffect(Unit) {
+        while (true){
+            delay(16L)
+            bullets = bullets.map { bullet ->
+                bullet.copy(y= bullet.y - 8f)
+            }.filter { bullet -> bullet.y > 50f}
+        }
+    }
+    //Enemy
+    val enemies = listOf(
+        Enemy(x = 150f, y = 100f),
+        Enemy(x = 300f, y =150f),
+        Enemy(x = 450f, y = 150f)
+    )
+
     Box(modifier = Modifier.fillMaxSize()){
 
         Canvas(modifier = Modifier.fillMaxSize()
             .onSizeChanged{ size ->
+                screenWidth = size.width.toFloat()
                 if(!playerInitialized){
                     playerX = size.width / 2f
                     playerY = size.height -100f
@@ -46,9 +69,10 @@ fun GameScreen() {
                 detectDragGestures(
                     onDrag = { change, dragAmount ->
                         change.consume()
-                       // val dragX = dragAmount.x
-                        playerX+= dragAmount.x
-
+                       val shipWidth= 80f
+                        playerX=(playerX + dragAmount.x)
+                            .coerceIn(shipWidth / 2f,
+                                screenWidth - shipWidth / 2f)
                     }
                 )
             }
@@ -82,6 +106,33 @@ fun GameScreen() {
                 path = shipPath,
                 color = Color.White
             )
+                // bullets
+                bullets.forEach { bullet ->
+                    drawRect(
+                        color = Color.Cyan,
+                        topLeft =Offset(
+                            x= bullet.x -4f,
+                            y= bullet.y -15f),
+                        size= Size(8f, 20f)
+
+                    )
+                }
+                //end bullets
+                //enemy
+                enemies.forEach { enemy ->
+                    val enemyWidth = 60f
+                    val enemyHeight = 40f
+                    drawRect(
+                        color = Color.Green,
+                        topLeft = Offset(
+                            enemy.x - enemyWidth / 2f,
+                            enemy.y - enemyHeight / 2f
+                        ),
+                        size = Size(enemyWidth, enemyHeight)
+                    )
+
+                }
+                //end enemy
         }
         Column(
             modifier = Modifier
@@ -100,6 +151,16 @@ fun GameScreen() {
             }) {
                 Text(text = "START")
             }
+            Button(onClick ={
+               // fireRequested=true
+                bullets = bullets + Bullet(x=playerX, y=playerY)
+            }){
+                Text(text= "DISPARAR")
+            }
+
+
+
+
             if(gameStarted){
                 Text(text = "GAME STARTED",color = Color.White)
             }
